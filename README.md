@@ -1,2 +1,2 @@
 # ise-module-api
-API module used by Internalsystemerror Limited
+API module for Zend Framework 2 used by Internalsystemerror Limited
