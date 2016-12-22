@@ -12,7 +12,7 @@
          verbose="true">
 
     <testsuites>
-        <testsuite name="admin">
+        <testsuite name="ISE: Module (API)">
             <directory>./tests</directory>
         </testsuite>
     </testsuites>
