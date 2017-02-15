@@ -5,6 +5,7 @@ namespace Ise\Api\Listener;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\ListenerAggregateInterface;
+use Zend\Http\Request;
 use Zend\Mvc\MvcEvent;
 use Zend\View\Model\ViewModel;
 
@@ -43,11 +44,15 @@ class XhrListener implements ListenerAggregateInterface
      */
     public function check(EventInterface $event)
     {
-        if ($event->getResult() instanceof ViewModel) {
-            if ($event->getRequest()->isXmlHttpRequest()) {
-                $event->getResult()->setTerminal(true);
-                $event->setViewModel($event->getResult());
-            }
+        $result  = $event->getResult();
+        $request = $event->getRequest();
+        if (!$result instanceof ViewModel
+            || !$request instanceof Request
+            || !$request->isXmlHttpRequest()) {
+            return;
         }
+            
+        $result->setTerminal(true);
+        $event->setViewModel($result);
     }
 }

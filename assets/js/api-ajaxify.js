@@ -131,7 +131,7 @@
          */
         setLinkLoading: function ($link) {
             $link.data('originalTitle', $link.html());
-            if ($link.hasClass('btn')) {
+            if ($link.hasClass('btn') || this.$navbar.has($link)) {
                 $link.html([
                     this.options.templates.loadingIcon,
                     this.options.templates.loadingText
