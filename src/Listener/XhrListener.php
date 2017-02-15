@@ -2,9 +2,11 @@
 
 namespace Ise\Api\Listener;
 
+use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\ListenerAggregateInterface;
 use Zend\Mvc\MvcEvent;
+use Zend\View\Model\ViewModel;
 
 class XhrListener implements ListenerAggregateInterface
 {
@@ -19,7 +21,7 @@ class XhrListener implements ListenerAggregateInterface
      */
     public function attach(EventManagerInterface $eventManager)
     {
-        $this->listeners[] = $eventManager->attach(MvcEvent::EVENT_DISPATCH, [$this, 'setXhrRequest'], -100);
+        $this->listeners[] = $eventManager->attach(MvcEvent::EVENT_DISPATCH, [$this, 'check']);
     }
 
     /**
