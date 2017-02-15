@@ -2,10 +2,7 @@
     
     'use strict';
     
-    var $document = $(document), $window = $(window), selectors = {
-        body: 'body',
-        
-    };
+    var $document = $(document), $window = $(window);
     
     /**
      * Initialise
