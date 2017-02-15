@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <phpdox xmlns="http://xml.phpdox.net/config" silent="false">
-    <project name="ISE: Module (ZF2 - API)" source="${basedir}" workdir="${basedir}/build/api/xml">
+    <project name="ISE: Module (API)" source="${basedir}" workdir="${basedir}/build/api/xml">
         <collector publiconly="false" backend="parser" />
         <generator output="${basedir}/build/api/docs">
             <enrich base="${basedir}/build/logs">

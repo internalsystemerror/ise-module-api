@@ -1,6 +1,6 @@
 <?php
 
-namespace IseApi\Listener;
+namespace Ise\Api\Listener;
 
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\ListenerAggregateInterface;

@@ -13,7 +13,7 @@
 
     <testsuites>
         <testsuite name="ISE: Module (API)">
-            <directory>./tests</directory>
+            <directory>./test</directory>
         </testsuite>
     </testsuites>
     <groups>
