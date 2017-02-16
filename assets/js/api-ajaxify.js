@@ -1,7 +1,7 @@
-(function($, document, window, undefined) {
-    
+(function ($, document, window, undefined) {
+
     'use strict';
-    
+
     var instance = null, $document = $(document), $window = $(window), defaults = {
         classes: {
             active: 'active'
@@ -15,20 +15,21 @@
             container: 'main',
             links: '[href^="/"]',
             navbar: '#isebootstrap-navbar',
-            dropdown: '[data-toggle="dropdown"]'
+            dropdown: '[data-toggle="dropdown"]',
+            modal: '.modal'
         }
     };
-    
+
     /**
      * Plugin constructor
      */
     function Ajaxify(options) {
         this._defaults = defaults;
         this.options = $.extend({}, defaults, options);
-        
+
         this.init();
     }
-    
+
     /**
      * Plugin body
      */
@@ -38,7 +39,7 @@
          */
         init: function () {
             var that = this;
-            
+
             this.$navbar = $document.find(this.options.selectors.navbar);
             this.$container = $document.find(this.options.selectors.container);
             $document.on('click', this.options.selectors.links, function (event) {
@@ -46,8 +47,11 @@
             });
             $window.on('popstate', function (event) {
                 if (event.originalEvent.state !== null) {
-                    this.goBackToUrl(window.location.href);
+                    that.goBackToUrl(window.location.href);
                 }
+            });
+            $(this.options.selectors.modal).on('hide.bs.modal', function () {
+                that.hideModal($(this));
             });
         },
         /**
@@ -55,12 +59,48 @@
          */
         linkClicked: function (event, $link) {
             var url = $link.prop('href');
-            
+
             if (window.location.href !== url) {
                 this.setLinkLoading($link);
                 this.navigateToNewUrl(url, $link);
             }
             event.preventDefault();
+        },
+        /**
+         * Show modal
+         */
+        showModal: function ($data, $link) {
+            var that = this;
+            $data.modal().on('hide.bs.modal', function () {
+                that.hideModal($(this));
+            });
+            if ($link !== undefined) {
+                this.setLinkLoaded($link);
+            }
+            this.$container.append($data);
+            return;
+        },
+        /**
+         * Hide modal
+         */
+        hideModal: function ($modal)
+        {
+            // Get cancel button
+            var $cancel = $modal.find('[data-href][data-dismiss="modal"]'), a = $('<a>');
+
+            // Get url
+            a.attr('href', $cancel.attr('data-href'));
+            $cancel.attr('data-href', '');
+            var url = a.prop('href');
+
+            if (url === window.location.href) {
+                $modal.on('hidden.bs.modal', function () {
+                    $modal.remove();
+                });
+                return;
+            }
+
+            this.navigateToNewUrl(url);
         },
         /**
          * Navigate to a new URL
@@ -72,6 +112,11 @@
                 method: 'GET',
                 dataType: 'html'
             }).done(function (data) {
+                var $data = $(data);
+                if ($data.hasClass('modal')) {
+                    that.showModal($data, $link);
+                    return;
+                }
                 window.history.pushState({}, '', url);
                 that.urlLoaded(data, $link);
                 that.updateActiveLinks(url);
@@ -102,6 +147,7 @@
          */
         urlLoaded: function (data, $link) {
             var that = this, $toFade = $(this.options.selectors.wrapper);
+
             $toFade.fadeOut('fast', function () {
                 that.$container.html(data);
                 $document.trigger('ise:ready');
@@ -131,14 +177,24 @@
          */
         setLinkLoading: function ($link) {
             $link.data('originalTitle', $link.html());
+
+            // Buttons in tables
+            if ($link.closest('.data-table').length > 0) {
+                $link.html(this.options.templates.loadingIcon);
+                return;
+            }
+
+            // Other buttons / navbar links
             if ($link.hasClass('btn') || this.$navbar.has($link)) {
                 $link.html([
                     this.options.templates.loadingIcon,
                     this.options.templates.loadingText
                 ].join(' '));
-            } else {
-                $link.html(this.options.templates.loadingText)
+                return;
             }
+
+            // Normal links
+            $link.html(this.options.templates.loadingText);
         },
         /**
          * Clear loading status on link
@@ -150,13 +206,13 @@
             }
         }
     };
-    
+
     // Prevent multiple instantiations
     $.fn.ajaxify = function (options) {
         if (instance === null) {
             instance = new Ajaxify(options);
         }
         return instance;
-    }
-    
+    };
+
 })(jQuery, document, window);
