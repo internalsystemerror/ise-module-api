@@ -51,8 +51,15 @@ class XhrListener implements ListenerAggregateInterface
             || !$request->isXmlHttpRequest()) {
             return;
         }
-            
-        $result->setTerminal(true);
-        $event->setViewModel($result);
+        
+        // Create wrapper
+        $messages = new ViewModel();
+        $messages->setTerminal(true);
+        $messages->setTemplate('partial/messages');
+        $messages->addChild($result, 'content');
+        
+        // Override defaults
+        $event->setResult($messages);
+        $event->setViewModel($messages);
     }
 }

@@ -2,7 +2,10 @@
 
     'use strict';
 
-    var instance = null, $document = $(document), $window = $(window), defaults = {
+    var instance = null, $document = $(document), $window = $(window), eventNames = {
+        ready: 'ise:ready',
+        load: 'ise:load'
+    }, defaults = {
         classes: {
             active: 'active'
         },
@@ -14,9 +17,13 @@
             wrapper: 'body > .container-fluid',
             container: 'main',
             links: '[href^="/"]',
+            form: 'form',
+            submit: '[type="submit"]',
             navbar: '#isebootstrap-navbar',
             dropdown: '[data-toggle="dropdown"]',
-            modal: '.modal'
+            modal: '.modal',
+            modalDismiss: '[data-href][data-dismiss="modal"]',
+            modalBackdrop: '.modal-backdrop'
         }
     };
 
@@ -26,6 +33,8 @@
     function Ajaxify(options) {
         this._defaults = defaults;
         this.options = $.extend(true, {}, defaults, options);
+        this.currentXhr = null;
+        this.currentLink = null;
 
         this.init();
     }
@@ -45,19 +54,40 @@
             $document.on('click', this.options.selectors.links, function (event) {
                 that.linkClicked(event, $(this));
             });
+            $document.on(eventNames.ready, function () {
+                $document.find(that.options.selectors.form).on('submit', function (event) {
+                    that.formSubmitted(event, $(this));
+                });
+                $(that.options.selectors.modal).modal().on({
+                    'hide.bs.modal': function () {
+                        that.hideModal($(this));
+                    },
+                    'hidden.bs.modal': function () {
+                        that.hiddenModal($(this));
+                    }
+                });
+            });
             $window.on('popstate', function (event) {
                 if (event.originalEvent.state !== null) {
+                    this.abort();
                     that.goBackToUrl(window.location.href);
                 }
             });
-            $(this.options.selectors.modal).on('hide.bs.modal', function () {
-                that.hideModal($(this));
-            });
+        },
+        abort: function () {
+            if (this.currentXhr) {
+                this.currentXhr.abort();
+            }
+            if (this.currentLink) {
+                this.setLinkLoaded(this.currentLink);
+            }
         },
         /**
          * A link has been clicked
          */
         linkClicked: function (event, $link) {
+            this.abort();
+            
             var url = $link.prop('href');
 
             if (window.location.href !== url) {
@@ -67,62 +97,76 @@
             event.preventDefault();
         },
         /**
+         * A form has been submitted
+         */
+        formSubmitted: function (event, $form) {
+            this.abort();
+            event.preventDefault();
+            
+            var that = this, url = $form.prop('action'), $link = $form.find(this.options.selectors.submit), data = $form.serialize();
+            this.setLinkLoading($link);
+            this.currentXhr = this.ajaxRequest(url, 'POST', data).done(function (data, status, xhr) {
+                if (status !== 'success') {
+                    return;
+                }
+                
+                var $modal = $link.closest('.modal');
+                if ($modal.length > 0) {
+                    that.hiddenModal($modal);
+                }
+                
+                window.history.pushState({}, '', url);
+                that.urlLoaded(url, data, $link);
+            });
+        },
+        /**
          * Show modal
          */
         showModal: function ($data, $link) {
-            var that = this;
-            $data.modal().on('hide.bs.modal', function () {
-                that.hideModal($(this));
-            });
             if ($link !== undefined) {
                 this.setLinkLoaded($link);
             }
             this.$container.append($data);
+            $document.trigger(eventNames.ready);
+            $window.trigger(eventNames.load);
             return;
         },
         /**
          * Hide modal
          */
-        hideModal: function ($modal)
-        {
+        hideModal: function ($modal) {
             // Get cancel button
-            var $cancel = $modal.find('[data-href][data-dismiss="modal"]'), a = $('<a>');
+            var $cancel = $modal.find(this.options.selectors.modalDismiss), a = $('<a>');
 
             // Get url
             a.attr('href', $cancel.attr('data-href'));
             $cancel.attr('data-href', '');
-            var url = a.prop('href');
+            var url = a.prop('href'), that = this;
 
             if (url === window.location.href) {
-                $modal.on('hidden.bs.modal', function () {
-                    $modal.remove();
-                });
                 return;
             }
 
             this.navigateToNewUrl(url);
         },
         /**
+         * Hidden modal
+         */
+        hiddenModal: function ($modal) {
+            $modal.remove();
+            $document.find(this.options.selectors.modalBackdrop).remove();
+        },
+        /**
          * Navigate to a new URL
          */
         navigateToNewUrl: function (url, $link) {
             var that = this;
-            $.ajax({
-                url: url,
-                method: 'GET',
-                dataType: 'html'
-            }).done(function (data) {
-                var $data = $(data);
-                if ($data.hasClass('modal')) {
-                    that.showModal($data, $link);
+            this.currentXhr = this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
+                if (status !== 'success') {
                     return;
                 }
                 window.history.pushState({}, '', url);
-                that.urlLoaded(data, $link);
-                that.updateActiveLinks(url);
-            }).fail(function (xhr, status, error) {
-                that.urlFailed(error);
-                that.setLinkLoaded($link);
+                that.urlLoaded(url, data, $link);
             });
         },
         /**
@@ -130,33 +174,70 @@
          */
         goBackToUrl: function (url) {
             var that = this;
-            $.ajax({
+            this.currentXhr = this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
+                if (status !== 'success') {
+                    return;
+                }
+                that.urlLoaded(url, data);
+            });
+        },
+        /**
+         * Ajax request
+         */
+        ajaxRequest: function (url, method, data) {
+            var that = this;
+            return $.ajax({
                 url: url,
-                method: 'GET',
+                method: method,
+                data: data,
                 dataType: 'html'
-            }).done(function (data) {
-                that.urlLoaded(data);
-                that.updateActiveLinks(url);
             }).fail(function (xhr, status, error) {
+                if (status === 'abort') {
+                    return;
+                }
+                if (that.currentLink) {
+                    that.setLinkLoaded(that.currentLink);
+                }
                 that.urlFailed(error);
-                that.setLinkLoaded($link);
+            }).always(function(data, status, xhr) {
+                this.currentXhr = null;
             });
         },
         /**
          * URL has loaded
          */
-        urlLoaded: function (data, $link) {
-            var that = this, $toFade = $(this.options.selectors.wrapper);
-
+        urlLoaded: function (url, data, $link) {
+            var that = this, $toFade = $(this.options.selectors.wrapper), $data = $(data);
+            if ($data.is(this.options.selectors.modal)) {
+                that.showModal($data, $link);
+                return;
+            }
             $toFade.fadeOut('fast', function () {
                 that.$container.html(data);
-                $document.trigger('ise:ready');
-                $window.trigger('ise:load');
+                $document.trigger(eventNames.ready);
+                $window.trigger(eventNames.load);
                 $toFade.fadeIn('fast');
                 if ($link !== undefined) {
+                    that.updateActiveLinks(url);
                     that.setLinkLoaded($link);
                 }
             });
+        },
+        urlFailed: function (error) {
+            var $alert = $.alert({
+                type: 'danger',
+                icon: 'warning-sign',
+                message: 'Unable to retrieve that page. The error given was "' + error + '".'
+            }), $notifications = this.$container.find('.alert-notifications');
+            
+            if ($notifications.length < 1) {
+                $notifications = $('<div class="alert-notifications"><div class="container-fluid"></div></div>');
+                this.$container.prepend($notifications);
+            }
+            
+            $alert.addClass('col-sm-3 col-sm-offset-9 col-lg-2 col-lg-offset-10');
+            $notifications.find('.container-fluid').prepend($alert);
+            $alert.notification();
         },
         /**
          * Update active status of links
@@ -179,30 +260,42 @@
          * Set loading status on link
          */
         setLinkLoading: function ($link) {
+            this.currentLink = $link;
+            
+            if ($link.is(this.options.selectors.submit)) {
+                $link.data('originalTitle', $link.val());
+                $link.val(this.options.templates.loadingText);
+                return;
+            }
+            
             $link.data('originalTitle', $link.html());
-
+            $link.html(this.getLinkLoadingText($link));
+        },
+        /**
+         * Get link loading text
+         */
+        getLinkLoadingText: function ($link) {
             // Buttons in tables
             if ($link.closest('.data-table').length > 0) {
-                $link.html(this.options.templates.loadingIcon);
-                return;
+                return this.options.templates.loadingIcon;
             }
 
             // Other buttons / navbar links
             if ($link.hasClass('btn') || (this.$navbar.length > 0 && this.$navbar.has($link))) {
-                $link.html([
+                return [
                     this.options.templates.loadingIcon,
                     this.options.templates.loadingText
-                ].join(' '));
-                return;
+                ].join(' ');
             }
 
             // Normal links
-            $link.html(this.options.templates.loadingText);
+            return this.options.templates.loadingText;
         },
         /**
          * Clear loading status on link
          */
         setLinkLoaded: function ($link) {
+            this.currentLink = null;
             var data = $link.data('originalTitle');
             if (data) {
                 $link.html(data);
