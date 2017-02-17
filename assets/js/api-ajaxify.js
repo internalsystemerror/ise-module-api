@@ -1,11 +1,16 @@
 (function ($, document, window, undefined) {
 
     'use strict';
+    
+    if (window.history.pushState === undefined) {
+        return;
+    }
 
     var instance = null, $document = $(document), $window = $(window), eventNames = {
         ready: 'ise:ready',
         load: 'ise:load'
     }, defaults = {
+        developerMode: true,
         classes: {
             active: 'active'
         },
@@ -16,14 +21,15 @@
         selectors: {
             wrapper: 'body > .container-fluid',
             container: 'main',
-            links: '[href^="/"]',
+            links: '[href^="/"]:not(.no-ajax)',
             form: 'form',
-            submit: '[type="submit"]',
+            submit: '[type="submit"]:not(.no-ajax)',
             navbar: '#isebootstrap-navbar',
             dropdown: '[data-toggle="dropdown"]',
             modal: '.modal',
             modalDismiss: '[data-href][data-dismiss="modal"]',
-            modalBackdrop: '.modal-backdrop'
+            modalBackdrop: '.modal-backdrop',
+            table: '.table'
         }
     };
 
@@ -35,6 +41,8 @@
         this.options = $.extend(true, {}, defaults, options);
         this.currentXhr = null;
         this.currentLink = null;
+        this.currentUrl = window.location.href;
+        this.previousUrl = null;
 
         this.init();
     }
@@ -118,9 +126,14 @@
                     that.hiddenModal($modal);
                 }
                 
-                window.history.pushState({}, '', url);
+                that.pushUrlToHistory(url);
                 that.urlLoaded(url, data, $link);
             });
+        },
+        pushUrlToHistory: function (url) {
+            this.previousUrl = (this.currentUrl);
+            this.currentUrl = url;
+            window.history.pushState({}, '', url);
         },
         /**
          * Show modal
@@ -154,10 +167,11 @@
             // Get url
             var url = this.cleanUrl($cancel.attr('data-href'));
             $cancel.attr('data-href', '');
-            if (url === window.location.href) {
+            if (url === this.previousUrl) {
+                window.history.back();
                 return;
             }
-
+            
             this.navigateToNewUrl(url);
         },
         /**
@@ -180,7 +194,7 @@
                 if (path) {
                     url = that.cleanUrl(path);
                 }
-                window.history.pushState({}, '', url);
+                that.pushUrlToHistory(url);
                 that.urlLoaded(url, data, $link);
             });
         },
@@ -188,16 +202,22 @@
          * Go back to a previous URL
          */
         goBackToUrl: function (url) {
+            this.currentUrl = (this.previousUrl);
+            this.previousUrl = null;
+            if (url === this.currentUrl) {
+                return;
+            }
             var that = this;
             this.currentXhr = this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
                 if (status !== 'success') {
                     return;
                 }
-                var path = xhr.getResponseHeader('X-Path');
-                if (path) {
-                    url = that.cleanUrl(path);
-                    window.history.pushState({}, '', url);
+                var path = that.cleanUrl(xhr.getResponseHeader('X-Path'));
+                if (path && path !== this.currentUrl) {
+                    url = path;
+                    that.pushUrlToHistory(url);
                 }
+                
                 that.urlLoaded(url, data);
             });
         },
@@ -218,7 +238,7 @@
                 if (that.currentLink) {
                     that.setLinkLoaded(that.currentLink);
                 }
-                that.urlFailed(error);
+                that.urlFailed(url, error, xhr);
             }).always(function(data, status, xhr) {
                 this.currentXhr = null;
             });
@@ -246,12 +266,19 @@
                 }
             });
         },
-        urlFailed: function (error) {
+        /**
+         * URL has failed to load
+         */
+        urlFailed: function (url, error, xhr) {
             var $alert = $.alert({
                 type: 'danger',
                 icon: 'warning-sign',
                 message: 'Unable to retrieve that page. The error given was "' + error + '".'
             }), $notifications = this.$container.find('.alert-notifications');
+            if (this.options.developerMode) {
+                this.developerBypass(url, xhr);
+                return;
+            }
             
             if ($notifications.length < 1) {
                 $notifications = $('<div class="alert-notifications"><div class="container-fluid"></div></div>');
@@ -261,6 +288,21 @@
             $alert.addClass('col-sm-3 col-sm-offset-9 col-lg-2 col-lg-offset-10');
             $notifications.find('.container-fluid').prepend($alert);
             $alert.notification();
+        },
+        /**
+         * Developer bypass
+         */
+        developerBypass: function (url, xhr) {
+            var that = this, $response = $(xhr.responseText), $data = $response.find(this.options.selectors.container), $retry = $('<a class="btn btn-primary pull-right" href="#"><span class="glyphicon glyphicon-refresh"></span> Retry</a>'), $wrapper = $('<div></div>');
+            if ($data.length < 1) {
+                $data = $response;
+            }
+            $retry.on('click', function (event) {
+                that.linkClicked(event, $(this));
+            });
+            $wrapper.append($retry, $data);
+            console.debug($wrapper.get());
+            this.urlLoaded(url, $wrapper.get());
         },
         /**
          * Update active status of links
@@ -299,7 +341,7 @@
          */
         getLinkLoadingText: function ($link) {
             // Buttons in tables
-            if ($link.closest('.data-table').length > 0) {
+            if ($link.closest(this.options.selectors.table).length > 0) {
                 return this.options.templates.loadingIcon;
             }
 
@@ -320,9 +362,16 @@
         setLinkLoaded: function ($link) {
             this.currentLink = null;
             var data = $link.data('originalTitle');
-            if (data) {
-                $link.html(data);
+            if (!data) {
+                return;
             }
+            
+            if ($link.is(this.options.selectors.submit)) {
+                $link.val(data);
+                return;
+            }
+            
+            $link.html(data);
         }
     };
 
