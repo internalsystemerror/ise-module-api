@@ -7,7 +7,6 @@ return [
             ],
             'js/master.js'   => [
                 'js/api-ajaxify.js',
-                'js/api-global.js',
             ],
         ],
         'paths'       => [

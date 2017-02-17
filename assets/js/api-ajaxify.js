@@ -25,7 +25,7 @@
      */
     function Ajaxify(options) {
         this._defaults = defaults;
-        this.options = $.extend({}, defaults, options);
+        this.options = $.extend(true, {}, defaults, options);
 
         this.init();
     }
@@ -163,6 +163,9 @@
          */
         updateActiveLinks: function (url) {
             var that = this;
+            if (this.$navbar.length < 1) {
+                return;
+            }
             this.$navbar.find(this.options.selectors.links).each(function () {
                 var $this = $(this), li = $this.parent('li');
                 if ($this.prop('href') === url) {
@@ -185,7 +188,7 @@
             }
 
             // Other buttons / navbar links
-            if ($link.hasClass('btn') || this.$navbar.has($link)) {
+            if ($link.hasClass('btn') || (this.$navbar.length > 0 && this.$navbar.has($link))) {
                 $link.html([
                     this.options.templates.loadingIcon,
                     this.options.templates.loadingText
