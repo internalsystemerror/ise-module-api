@@ -61,5 +61,6 @@ class XhrListener implements ListenerAggregateInterface
         // Override defaults
         $event->setResult($messages);
         $event->setViewModel($messages);
+        $event->getResponse()->getHeaders()->addHeaderLine('X-Path', $request->getRequestUri());
     }
 }

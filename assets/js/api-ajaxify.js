@@ -69,7 +69,7 @@
             });
             $window.on('popstate', function (event) {
                 if (event.originalEvent.state !== null) {
-                    this.abort();
+                    that.abort();
                     that.goBackToUrl(window.location.href);
                 }
             });
@@ -110,7 +110,10 @@
                     return;
                 }
                 
-                var $modal = $link.closest('.modal');
+                var path = xhr.getResponseHeader('X-Path'), $modal = $link.closest('.modal');
+                if (path) {
+                    url = that.cleanUrl(path);
+                }
                 if ($modal.length > 0) {
                     that.hiddenModal($modal);
                 }
@@ -132,17 +135,25 @@
             return;
         },
         /**
+         * Clean URL
+         */
+        cleanUrl: function (url) {
+            var a = $('<a>');
+
+            // Get url
+            a.attr('href', url);
+            return a.prop('href');
+        },
+        /**
          * Hide modal
          */
         hideModal: function ($modal) {
             // Get cancel button
-            var $cancel = $modal.find(this.options.selectors.modalDismiss), a = $('<a>');
+            var $cancel = $modal.find(this.options.selectors.modalDismiss);
 
             // Get url
-            a.attr('href', $cancel.attr('data-href'));
+            var url = this.cleanUrl($cancel.attr('data-href'));
             $cancel.attr('data-href', '');
-            var url = a.prop('href'), that = this;
-
             if (url === window.location.href) {
                 return;
             }
@@ -165,6 +176,10 @@
                 if (status !== 'success') {
                     return;
                 }
+                var path = xhr.getResponseHeader('X-Path');
+                if (path) {
+                    url = that.cleanUrl(path);
+                }
                 window.history.pushState({}, '', url);
                 that.urlLoaded(url, data, $link);
             });
@@ -177,6 +192,11 @@
             this.currentXhr = this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
                 if (status !== 'success') {
                     return;
+                }
+                var path = xhr.getResponseHeader('X-Path');
+                if (path) {
+                    url = that.cleanUrl(path);
+                    window.history.pushState({}, '', url);
                 }
                 that.urlLoaded(url, data);
             });
@@ -216,6 +236,9 @@
                 that.$container.html(data);
                 $document.trigger(eventNames.ready);
                 $window.trigger(eventNames.load);
+                $document.find(that.options.selectors.modalBackdrop).fadeOut('fast', function () {
+                    $(this).remove();
+                });
                 $toFade.fadeIn('fast');
                 if ($link !== undefined) {
                     that.updateActiveLinks(url);
