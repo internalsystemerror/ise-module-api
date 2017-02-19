@@ -19,6 +19,7 @@
             loadingText: '... loading ...'
         },
         selectors: {
+            body: 'body',
             wrapper: 'body > .container-fluid',
             container: 'main',
             links: '[href^="/"]:not(.no-ajax)',
@@ -41,8 +42,9 @@
         this.options = $.extend(true, {}, defaults, options);
         this.currentXhr = null;
         this.currentLink = null;
-        this.currentUrl = window.location.href;
-        this.previousUrl = null;
+        this.skipPop = false;
+        console.log('Setting modal false');
+        this.isModal = false;
 
         this.init();
     }
@@ -55,6 +57,7 @@
          * Initialise the plugin
          */
         init: function () {
+            console.log('init');
             var that = this;
 
             this.$navbar = $document.find(this.options.selectors.navbar);
@@ -83,9 +86,16 @@
             });
         },
         abort: function () {
-            if (this.currentXhr) {
-                this.currentXhr.abort();
+            console.log('abort');
+            if (this.currentXhr === null) {
+                return;
             }
+            console.debug(this.currentXhr);
+            this.currentXhr.abort();
+            this.currentXhr = null;
+            this.skipPop = false;
+            console.log('Setting modal false');
+            this.isModal = false;
             if (this.currentLink) {
                 this.setLinkLoaded(this.currentLink);
             }
@@ -94,6 +104,7 @@
          * A link has been clicked
          */
         linkClicked: function (event, $link) {
+            console.log('linkClicked');
             this.abort();
             
             var url = $link.prop('href');
@@ -108,40 +119,49 @@
          * A form has been submitted
          */
         formSubmitted: function (event, $form) {
+            console.log('formSubmitted');
             this.abort();
             event.preventDefault();
             
             var that = this, url = $form.prop('action'), $link = $form.find(this.options.selectors.submit), data = $form.serialize();
             this.setLinkLoading($link);
-            this.currentXhr = this.ajaxRequest(url, 'POST', data).done(function (data, status, xhr) {
+            this.ajaxRequest(url, 'POST', data).done(function (data, status, xhr) {
                 if (status !== 'success') {
                     return;
                 }
                 
+                // Check for URL change
                 var path = xhr.getResponseHeader('X-Path'), $modal = $link.closest('.modal');
                 if (path) {
                     url = that.cleanUrl(path);
                 }
+                
+                // Check for modal
                 if ($modal.length > 0) {
                     that.hiddenModal($modal);
                 }
                 
-                that.pushUrlToHistory(url);
-                that.urlLoaded(url, data, $link);
+                // New URL loaded
+                that.urlLoaded(url, $(data), $link);
             });
         },
+        /**
+         * Push a new URL into the history
+         */
         pushUrlToHistory: function (url) {
-            this.previousUrl = (this.currentUrl);
-            this.currentUrl = url;
+            console.log('pushUrlToHistory');
             window.history.pushState({}, '', url);
         },
         /**
          * Show modal
          */
         showModal: function ($data, $link) {
+            console.log('showModal');
             if ($link !== undefined) {
                 this.setLinkLoaded($link);
             }
+            console.log('Setting modal true');
+            this.isModal = true;
             this.$container.append($data);
             $document.trigger(eventNames.ready);
             $window.trigger(eventNames.load);
@@ -151,6 +171,7 @@
          * Clean URL
          */
         cleanUrl: function (url) {
+            console.log('cleanUrl');
             var a = $('<a>');
 
             // Get url
@@ -161,13 +182,15 @@
          * Hide modal
          */
         hideModal: function ($modal) {
+            console.log('hideModal');
             // Get cancel button
             var $cancel = $modal.find(this.options.selectors.modalDismiss);
 
             // Get url
             var url = this.cleanUrl($cancel.attr('data-href'));
             $cancel.attr('data-href', '');
-            if (url === this.previousUrl) {
+            if (url === window.history.previous) {
+                this.skipPop = true;
                 window.history.back();
                 return;
             }
@@ -178,55 +201,66 @@
          * Hidden modal
          */
         hiddenModal: function ($modal) {
+            console.log('hiddenModal');
             $modal.remove();
+            $document.find(this.options.selectors.body).removeClass('modal-open');
             $document.find(this.options.selectors.modalBackdrop).remove();
         },
         /**
          * Navigate to a new URL
          */
         navigateToNewUrl: function (url, $link) {
+            console.log('navigateToNewUrl');
             var that = this;
-            this.currentXhr = this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
+            this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
                 if (status !== 'success') {
                     return;
                 }
+                
+                // Check for path change
                 var path = xhr.getResponseHeader('X-Path');
                 if (path) {
                     url = that.cleanUrl(path);
                 }
-                that.pushUrlToHistory(url);
-                that.urlLoaded(url, data, $link);
+                
+                // New URL loaded
+                that.urlLoaded(url, $(data), $link);
             });
         },
         /**
          * Go back to a previous URL
          */
         goBackToUrl: function (url) {
-            this.currentUrl = (this.previousUrl);
-            this.previousUrl = null;
-            if (url === this.currentUrl) {
+            console.log('goBackToUrl');
+            // Shall we skip the pop request?
+            if (this.skipPop) {
+                this.skipPop = false;
                 return;
             }
+            
+            // Make request for a new page
             var that = this;
-            this.currentXhr = this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
+            this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
                 if (status !== 'success') {
                     return;
                 }
-                var path = that.cleanUrl(xhr.getResponseHeader('X-Path'));
-                if (path && path !== this.currentUrl) {
-                    url = path;
-                    that.pushUrlToHistory(url);
+                // Check for path change
+                var path = xhr.getResponseHeader('X-Path');
+                if (path) {
+                    url = that.cleanUrl(path);
                 }
                 
-                that.urlLoaded(url, data);
+                // New URL loaded
+                that.urlLoaded(url, $(data));
             });
         },
         /**
          * Ajax request
          */
         ajaxRequest: function (url, method, data) {
+            console.log('ajaxRequest');
             var that = this;
-            return $.ajax({
+            this.currentXhr = $.ajax({
                 url: url,
                 method: method,
                 data: data,
@@ -240,59 +274,94 @@
                 }
                 that.urlFailed(url, error, xhr);
             }).always(function(data, status, xhr) {
-                this.currentXhr = null;
+                that.currentXhr = null;
             });
+            return this.currentXhr;
         },
         /**
          * URL has loaded
          */
-        urlLoaded: function (url, data, $link) {
-            var that = this, $toFade = $(this.options.selectors.wrapper), $data = $(data);
-            if ($data.is(this.options.selectors.modal)) {
-                that.showModal($data, $link);
+        urlLoaded: function (url, $data, $link) {
+            console.log('urlLoaded');
+            if (url === window.location.href) {
+                // No animation
+                this.replaceContainerContent(url, $data, $link);
                 return;
             }
+            
+            // Update URL
+            this.pushUrlToHistory(url);
+            
+            // If is modal set new content without animation
+            if (this.isModal === true) {
+                console.log('Setting modal false');
+                this.isModal = false;
+                this.replaceContainerContent(url, $data, $link);
+                return;
+            }
+            
+            // Check for new modal and show
+            if ($data.is(this.options.selectors.modal)) {
+                this.showModal($data, $link);
+                return;
+            }
+            
+            // Begin animating
+            var that = this, $toFade = $(this.options.selectors.wrapper);
             $toFade.fadeOut('fast', function () {
-                that.$container.html(data);
-                $document.trigger(eventNames.ready);
-                $window.trigger(eventNames.load);
-                $document.find(that.options.selectors.modalBackdrop).fadeOut('fast', function () {
-                    $(this).remove();
-                });
+                
+                // Set new content
+                that.replaceContainerContent(url, $data, $link);
+                
+                // Finish animation
                 $toFade.fadeIn('fast');
-                if ($link !== undefined) {
-                    that.updateActiveLinks(url);
-                    that.setLinkLoaded($link);
-                }
             });
+        },
+        /**
+         * Set new container content
+         */
+        replaceContainerContent: function (url, $data, $link) {
+            console.log('replaceContainerContent');
+            // Remove any old modal backdrops
+            $document.find(this.options.selectors.modalBackdrop).fadeOut('fast', function () {
+                $(this).remove();
+            });
+            
+            // Emtpy contain and add new content
+            this.$container.html($data);
+            
+            // Trigger load events
+            $document.trigger(eventNames.ready);
+            $window.trigger(eventNames.load);
+            
+            // Update links
+            if ($link !== undefined) {
+                this.updateActiveLinks(url);
+                this.setLinkLoaded($link);
+            }
         },
         /**
          * URL has failed to load
          */
         urlFailed: function (url, error, xhr) {
+            console.log('urlFailed');
             var $alert = $.alert({
                 type: 'danger',
                 icon: 'warning-sign',
                 message: 'Unable to retrieve that page. The error given was "' + error + '".'
-            }), $notifications = this.$container.find('.alert-notifications');
-            if (this.options.developerMode) {
+            });
+            if (this.options.developerMode && xhr.responseText) {
                 this.developerBypass(url, xhr);
                 return;
             }
             
-            if ($notifications.length < 1) {
-                $notifications = $('<div class="alert-notifications"><div class="container-fluid"></div></div>');
-                this.$container.prepend($notifications);
-            }
-            
-            $alert.addClass('col-sm-3 col-sm-offset-9 col-lg-2 col-lg-offset-10');
-            $notifications.find('.container-fluid').prepend($alert);
             $alert.notification();
         },
         /**
          * Developer bypass
          */
         developerBypass: function (url, xhr) {
+            console.log('developerBypass');
             var that = this, $response = $(xhr.responseText), $data = $response.find(this.options.selectors.container), $retry = $('<a class="btn btn-primary pull-right" href="#"><span class="glyphicon glyphicon-refresh"></span> Retry</a>'), $wrapper = $('<div></div>');
             if ($data.length < 1) {
                 $data = $response;
@@ -301,13 +370,15 @@
                 that.linkClicked(event, $(this));
             });
             $wrapper.append($retry, $data);
-            console.debug($wrapper.get());
-            this.urlLoaded(url, $wrapper.get());
+            
+            // New URL loaded
+            this.urlLoaded(url, $wrapper);
         },
         /**
          * Update active status of links
          */
         updateActiveLinks: function (url) {
+            console.log('updateActiveLinks');
             var that = this;
             if (this.$navbar.length < 1) {
                 return;
@@ -325,6 +396,7 @@
          * Set loading status on link
          */
         setLinkLoading: function ($link) {
+            console.log('setLinkLoading');
             this.currentLink = $link;
             
             if ($link.is(this.options.selectors.submit)) {
@@ -340,6 +412,7 @@
          * Get link loading text
          */
         getLinkLoadingText: function ($link) {
+            console.log('getLinkLoadingText');
             // Buttons in tables
             if ($link.closest(this.options.selectors.table).length > 0) {
                 return this.options.templates.loadingIcon;
@@ -360,6 +433,7 @@
          * Clear loading status on link
          */
         setLinkLoaded: function ($link) {
+            console.log('setLinkLoaded');
             this.currentLink = null;
             var data = $link.data('originalTitle');
             if (!data) {
