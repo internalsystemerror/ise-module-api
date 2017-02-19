@@ -43,7 +43,6 @@
         this.currentXhr = null;
         this.currentLink = null;
         this.skipPop = false;
-        console.log('Setting modal false');
         this.isModal = false;
 
         this.init();
