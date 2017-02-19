@@ -57,7 +57,6 @@
          * Initialise the plugin
          */
         init: function () {
-            console.log('init');
             var that = this;
 
             this.$navbar = $document.find(this.options.selectors.navbar);
@@ -86,15 +85,12 @@
             });
         },
         abort: function () {
-            console.log('abort');
             if (this.currentXhr === null) {
                 return;
             }
-            console.debug(this.currentXhr);
             this.currentXhr.abort();
             this.currentXhr = null;
             this.skipPop = false;
-            console.log('Setting modal false');
             this.isModal = false;
             if (this.currentLink) {
                 this.setLinkLoaded(this.currentLink);
@@ -104,7 +100,6 @@
          * A link has been clicked
          */
         linkClicked: function (event, $link) {
-            console.log('linkClicked');
             this.abort();
             
             var url = $link.prop('href');
@@ -119,7 +114,6 @@
          * A form has been submitted
          */
         formSubmitted: function (event, $form) {
-            console.log('formSubmitted');
             this.abort();
             event.preventDefault();
             
@@ -149,18 +143,15 @@
          * Push a new URL into the history
          */
         pushUrlToHistory: function (url) {
-            console.log('pushUrlToHistory');
             window.history.pushState({}, '', url);
         },
         /**
          * Show modal
          */
         showModal: function ($data, $link) {
-            console.log('showModal');
             if ($link !== undefined) {
                 this.setLinkLoaded($link);
             }
-            console.log('Setting modal true');
             this.isModal = true;
             this.$container.append($data);
             $document.trigger(eventNames.ready);
@@ -171,7 +162,6 @@
          * Clean URL
          */
         cleanUrl: function (url) {
-            console.log('cleanUrl');
             var a = $('<a>');
 
             // Get url
@@ -182,7 +172,6 @@
          * Hide modal
          */
         hideModal: function ($modal) {
-            console.log('hideModal');
             // Get cancel button
             var $cancel = $modal.find(this.options.selectors.modalDismiss);
 
@@ -201,7 +190,6 @@
          * Hidden modal
          */
         hiddenModal: function ($modal) {
-            console.log('hiddenModal');
             $modal.remove();
             $document.find(this.options.selectors.body).removeClass('modal-open');
             $document.find(this.options.selectors.modalBackdrop).remove();
@@ -210,7 +198,6 @@
          * Navigate to a new URL
          */
         navigateToNewUrl: function (url, $link) {
-            console.log('navigateToNewUrl');
             var that = this;
             this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
                 if (status !== 'success') {
@@ -231,7 +218,6 @@
          * Go back to a previous URL
          */
         goBackToUrl: function (url) {
-            console.log('goBackToUrl');
             // Shall we skip the pop request?
             if (this.skipPop) {
                 this.skipPop = false;
@@ -258,7 +244,6 @@
          * Ajax request
          */
         ajaxRequest: function (url, method, data) {
-            console.log('ajaxRequest');
             var that = this;
             this.currentXhr = $.ajax({
                 url: url,
@@ -282,7 +267,6 @@
          * URL has loaded
          */
         urlLoaded: function (url, $data, $link) {
-            console.log('urlLoaded');
             if (url === window.location.href) {
                 // No animation
                 this.replaceContainerContent(url, $data, $link);
@@ -294,7 +278,6 @@
             
             // If is modal set new content without animation
             if (this.isModal === true) {
-                console.log('Setting modal false');
                 this.isModal = false;
                 this.replaceContainerContent(url, $data, $link);
                 return;
@@ -321,7 +304,6 @@
          * Set new container content
          */
         replaceContainerContent: function (url, $data, $link) {
-            console.log('replaceContainerContent');
             // Remove any old modal backdrops
             $document.find(this.options.selectors.modalBackdrop).fadeOut('fast', function () {
                 $(this).remove();
@@ -344,7 +326,6 @@
          * URL has failed to load
          */
         urlFailed: function (url, error, xhr) {
-            console.log('urlFailed');
             var $alert = $.alert({
                 type: 'danger',
                 icon: 'warning-sign',
@@ -361,7 +342,6 @@
          * Developer bypass
          */
         developerBypass: function (url, xhr) {
-            console.log('developerBypass');
             var that = this, $response = $(xhr.responseText), $data = $response.find(this.options.selectors.container), $retry = $('<a class="btn btn-primary pull-right" href="#"><span class="glyphicon glyphicon-refresh"></span> Retry</a>'), $wrapper = $('<div></div>');
             if ($data.length < 1) {
                 $data = $response;
@@ -378,7 +358,6 @@
          * Update active status of links
          */
         updateActiveLinks: function (url) {
-            console.log('updateActiveLinks');
             var that = this;
             if (this.$navbar.length < 1) {
                 return;
@@ -396,7 +375,6 @@
          * Set loading status on link
          */
         setLinkLoading: function ($link) {
-            console.log('setLinkLoading');
             this.currentLink = $link;
             
             if ($link.is(this.options.selectors.submit)) {
@@ -412,7 +390,6 @@
          * Get link loading text
          */
         getLinkLoadingText: function ($link) {
-            console.log('getLinkLoadingText');
             // Buttons in tables
             if ($link.closest(this.options.selectors.table).length > 0) {
                 return this.options.templates.loadingIcon;
@@ -433,7 +410,6 @@
          * Clear loading status on link
          */
         setLinkLoaded: function ($link) {
-            console.log('setLinkLoaded');
             this.currentLink = null;
             var data = $link.data('originalTitle');
             if (!data) {
