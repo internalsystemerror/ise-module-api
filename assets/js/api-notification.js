@@ -43,10 +43,9 @@
                 $notifications = $('<div class="alert-notifications"><div class="container-fluid"></div></div>');
                 $document.find(this.options.selectors.container).prepend($notifications);
             }
-            if (!$notifications.has(this.$element)) {
+            if (!$.contains($notifications, this.$element)) {
                 $notifications.find('.container-fluid').prepend(this.$element);
             }
-            
             this.$element.addClass('col-sm-3 col-sm-offset-9 col-lg-2 col-lg-offset-10').delay(this.options.show.delay).fadeIn(
                 this.options.show.duration,
                 function () {
