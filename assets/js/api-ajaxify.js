@@ -60,9 +60,13 @@
 
             this.$navbar = $document.find(this.options.selectors.navbar);
             this.$container = $document.find(this.options.selectors.container);
+            
+            // Bind click event to links
             $document.on('click', this.options.selectors.links, function (event) {
                 that.linkClicked(event, $(this));
             });
+            
+            // Create ready functionality
             $document.on(eventNames.ready, function () {
                 $document.find(that.options.selectors.form).on('submit', function (event) {
                     that.formSubmitted(event, $(this));
@@ -76,6 +80,9 @@
                     }
                 });
             });
+            
+            // Create history functionality
+            window.history.replaceState({}, document.title, window.location.href);
             $window.on('popstate', function (event) {
                 if (event.originalEvent.state !== null) {
                     that.abort();
@@ -142,7 +149,7 @@
          * Push a new URL into the history
          */
         pushUrlToHistory: function (url) {
-            window.history.pushState({}, '', url);
+            window.history.pushState({}, document.title, url);
         },
         /**
          * Show modal
