@@ -383,7 +383,7 @@
         setLinkLoading: function ($link) {
             this.currentLink = $link;
             
-            if ($link.is(this.options.selectors.submit)) {
+            if ($link.is('input')) {
                 $link.data('originalTitle', $link.val());
                 $link.val(this.options.templates.loadingText);
                 return;
