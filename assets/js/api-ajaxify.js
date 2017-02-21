@@ -184,7 +184,7 @@
             // Get url
             var url = this.cleanUrl($cancel.attr('data-href'));
             $cancel.attr('data-href', '');
-            if (url === window.history.previous) {
+            if (this.isModal && url === window.history.previous) {
                 this.skipPop = true;
                 window.history.back();
                 return;
