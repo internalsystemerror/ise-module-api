@@ -7,6 +7,7 @@ use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\ListenerAggregateInterface;
 use Zend\Http\Request;
 use Zend\Mvc\MvcEvent;
+use Zend\View\Model\JsonModel;
 use Zend\View\Model\ViewModel;
 
 class XhrListener implements ListenerAggregateInterface
@@ -48,7 +49,8 @@ class XhrListener implements ListenerAggregateInterface
         $request = $event->getRequest();
         if (!$result instanceof ViewModel
             || !$request instanceof Request
-            || !$request->isXmlHttpRequest()) {
+            || !$request->isXmlHttpRequest()
+            || $result instanceof JsonModel) {
             return;
         }
         

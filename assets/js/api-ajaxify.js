@@ -205,7 +205,7 @@
          */
         navigateToNewUrl: function (url, $link) {
             var that = this;
-            this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
+            this.ajaxRequest(url).done(function (data, status, xhr) {
                 if (status !== 'success') {
                     return;
                 }
@@ -232,7 +232,7 @@
             
             // Make request for a new page
             var that = this;
-            this.ajaxRequest(url, 'GET').done(function (data, status, xhr) {
+            this.ajaxRequest(url).done(function (data, status, xhr) {
                 if (status !== 'success') {
                     return;
                 }
@@ -249,13 +249,20 @@
         /**
          * Ajax request
          */
-        ajaxRequest: function (url, method, data) {
+        ajaxRequest: function (url, method, data, dataType) {
             var that = this;
+            if (method === undefined) {
+                method = 'GET';
+            }
+            if (dataType === undefined) {
+                dataType = 'html';
+            }
+            
             this.currentXhr = $.ajax({
                 url: url,
                 method: method,
                 data: data,
-                dataType: 'html'
+                dataType: dataType
             }).fail(function (xhr, status, error) {
                 if (status === 'abort') {
                     return;
@@ -348,17 +355,15 @@
          * Developer bypass
          */
         developerBypass: function (url, xhr) {
-            var that = this, $response = $(xhr.responseText), $data = $response.find(this.options.selectors.container), $retry = $('<a class="btn btn-primary pull-right" href="#"><span class="glyphicon glyphicon-refresh"></span> Retry</a>'), $wrapper = $('<div></div>');
+            var $response = $(xhr.responseText), $data = $response.find(this.options.selectors.container).children(), $retry = $('<a class="btn btn-primary pull-right"><span class="glyphicon glyphicon-refresh"></span> Retry</a>');
             if ($data.length < 1) {
                 $data = $response;
             }
-            $retry.on('click', function (event) {
-                that.linkClicked(event, $(this));
-            });
-            $wrapper.append($retry, $data);
+            $retry.attr('href', url);
+            $data.first().prepend($retry);
             
             // New URL loaded
-            this.urlLoaded(url, $wrapper);
+            this.urlLoaded(url, $data);
         },
         /**
          * Update active status of links

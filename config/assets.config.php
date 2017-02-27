@@ -17,12 +17,12 @@ return [
         ],
         'map'         => [
             /* CSS */
-            'css/api-global.css'     => __DIR__ . '/../assets/css/api-global.css',
+            'css/api-global.css'     => realpath(__DIR__ . '/../assets/css/api-global.css'),
             /* JS */
-            'js/api-alert.js'        => __DIR__ . '/../assets/js/api-alert.js',
-            'js/api-notification.js' => __DIR__ . '/../assets/js/api-notification.js',
-            'js/api-ajaxify.js'      => __DIR__ . '/../assets/js/api-ajaxify.js',
-            'js/api-global.js'       => __DIR__ . '/../assets/js/api-global.js',
+            'js/api-alert.js'        => realpath(__DIR__ . '/../assets/js/api-alert.js'),
+            'js/api-notification.js' => realpath(__DIR__ . '/../assets/js/api-notification.js'),
+            'js/api-ajaxify.js'      => realpath(__DIR__ . '/../assets/js/api-ajaxify.js'),
+            'js/api-global.js'       => realpath(__DIR__ . '/../assets/js/api-global.js'),
         ],
     ],
 ];
