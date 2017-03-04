@@ -9,8 +9,15 @@
     var instance = null, $document = $(document), $window = $(window), eventNames = {
         ready: 'ise:ready',
         load: 'ise:load'
-    }, defaults = {
+    };
+    
+    /**
+     * Default options
+     */
+    $.Ajaxify = {};
+    $.Ajaxify.defaultOptions = {
         developerMode: true,
+        disabled: false,
         classes: {
             active: 'active'
         },
@@ -37,16 +44,15 @@
     /**
      * Plugin constructor
      */
-    function Ajaxify(options) {
-        this._defaults = defaults;
-        this.options = $.extend(true, {}, defaults, options);
+    function Ajaxify (options) {
+        this.options = $.extend(true, {}, $.Ajaxify.defaultOptions, options);
         this.currentXhr = null;
         this.currentLink = null;
         this.skipPop = false;
         this.isModal = false;
 
         this.init();
-    }
+    };
 
     /**
      * Plugin body
@@ -57,6 +63,9 @@
          */
         init: function () {
             var that = this;
+            if (this.options.disabled) {
+                return;
+            }
 
             this.$navbar = $document.find(this.options.selectors.navbar);
             this.$container = $document.find(this.options.selectors.container);
