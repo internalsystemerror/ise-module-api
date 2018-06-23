@@ -3,15 +3,25 @@
     "description": "API module for Zend Framework 2 used by Internalsystemerror Limited",
     "license": "BSD-3-Clause",
     "homepage": "https://github.com/internalsystemerror/ise-module-api",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "classmap-authoritative": true,
+        "discard-changes": true,
+        "optimize-autoloader": true,
+        "prepend-autoloader": true,
+        "process-timeout": 5000,
+        "sort-packages": true
+    },
     "require": {
-        "php": "^5.6 || ^7.0",
-        "zendframework/zend-eventmanager": "^2.5 || ^3.0",
-        "zendframework/zend-modulemanager": "^2.5 || ^3.0",
-        "zendframework/zend-http": "^2.5 || ^3.0",
-        "zendframework/zend-mvc": "^2.5 || ^3.0"
+        "php": "^7.1",
+        "zendframework/zend-eventmanager": "^3.2.1",
+        "zendframework/zend-http": "^2.8.0",
+        "zendframework/zend-modulemanager": "^2.8.2",
+        "zendframework/zend-mvc": "^3.1.1"
     },
     "require-dev": {
-        "ise/php-metapackage-development": "^1.0"
+        "ise/php-metapackage-development": "^2.0.2"
     },
     "autoload": {
         "psr-4": {
@@ -25,19 +35,18 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "1.0.x-dev"
+            "dev-master": "1.0.x-dev",
+            "dev-develop": "1.1.x-dev"
         }
     },
     "scripts": {
-        "development-disable": "zf-development-mode disable",
-        "development-enable": "zf-development-mode enable",
-        "development-status": "zf-development-mode status",
-        "test": "phpunit -c ./phpunit.xml.dist",
-        "cs-fix": "phpcbf",
+        "analyse": "phpstan analyse -l 7 -c phpstan.neon config src",
         "cs-check": [
             "phpcs",
-            "phpmd . html --reportfile ./build/logs/phpmd.html --suffixes php,phtml --exclude vendor,build ./phpmd.xml.dist",
+            "phpmd ./config,./src,./view html --reportfile ./build/logs/phpmd.html --suffixes php,phtml ./phpmd.xml.dist",
             "phpcpd . --exclude=build --exclude=vendor"
-        ]
+        ],
+        "cs-fix": "phpcbf",
+        "test": "phpunit -c ./phpunit.xml.dist"
     }
 }
